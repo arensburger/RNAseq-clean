@@ -12,7 +12,7 @@ use File::Path;
 use common_scripts;
 
 # adapter trimming parameters
-my $TRIMMOMATIC_PATH = "/home/peter/Work/scripts/Trimmomatic-0.20";
+my $TRIMMOMATIC_PATH = "./Trimmomatic-0.20";
 my $RIBOSOME_BOWTIE2_FILE = "/home/peter/Work/ribosomal_database/arthropod_ribosomes";
 my $MINLEN = 20;
 
