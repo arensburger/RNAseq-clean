@@ -152,7 +152,7 @@ print LOG datetime, " Unaired file quality boxplot and nucleotide distributions 
 sub stats1 {
 	my ($inputfile) = @_;
 	my $basename = basename($inputfile, ".fq");
-	my $ts = File::Temp->new( UNLINK => 0, SUFFIX => '.txt' ); # temporary file
+	my $ts = File::Temp->new( UNLINK => 1, SUFFIX => '.txt' ); # temporary file
 	my $boxfilename = $basename . "-quality_boxplot.png";
 	my $nucfilename = $basename . "-nuc_dist.png";
 	`fastx_quality_stats -i $inputfile -o $ts -Q33`;
@@ -267,6 +267,9 @@ sub ribosome_removal{
 
 	my $tx = File::Temp->new( UNLINK => 1, SUFFIX => '.sam' ); # temporary file with hits
 	`bowtie2 -x $RIBOSOME_BOWTIE2_FILE -U $infile -S $tx -p $threads --local -k 1 --sam-nohead --sam-nosq`;
+	if ($? == -1) {
+		warn "WARNING: bowtie2 program not found, continuing nontheless";
+	}	
 
 	#record the names of the files that matched
 	open (INPUT2, $tx) or die "cannot open output of bowtie $tx";
