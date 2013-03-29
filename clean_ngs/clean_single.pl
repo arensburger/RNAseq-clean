@@ -71,6 +71,14 @@ else {
 	open (LOG, ">Log.txt") or die ("cannot create Log.txt");
 }
 
+#determine the length of the first sequence before trimming
+open (INPUT, $reads) or die "cannot open file $reads\n";
+my $line = <INPUT>;
+$line = <INPUT>;
+chomp $line;
+my $untrimmedlength = length $line; #length of sequences before trimming
+close INPUT;
+
 ########### start cleanning ######################
 print LOG datetime, " Initial count\n";
 print LOG datetime, " File $reads, total FASTQ reads: ", count_fastq($reads), "\n"; # do a basic count
@@ -81,6 +89,11 @@ print LOG datetime, " Clipping adapters and quality filter with Trimmomatic\n";
 clipadapters($reads);
 print LOG datetime, " File with reads, FASTQ reads: ", count_fastq($reads_output), "\n"; 
 print LOG "\n";
+
+#remove sequences that were not clipped
+print LOG datetime, " Removing sequences that did NOT have a recognisable adapter sequence\n";
+removeunclipped($reads_output, $untrimmedlength);
+print LOG datetime, " After removing sequences that do not have adapter sequences left: ", count_fastq($reads_output), "\n";
 
 # test to see if header of first line is compatible with chastity filter
 open (my $fh, $reads_output) or die("ack -$!");
@@ -127,6 +140,8 @@ sub clipadapters {
 #       print STDERRR "clipping adapters...\n"; 
         my ($inputfile1) = @_;
         my $outputfile1 = File::Temp->new( UNLINK => 1, SUFFIX => '.fastq' );
+
+	#run trimmomatic
         `java -classpath $TRIMMOMATIC_PATH/trimmomatic-0.20.jar org.usadellab.trimmomatic.TrimmomaticSE -threads $threads -phred33 $inputfile1 $reads_output ILLUMINACLIP:$TRIMMOMATIC_PATH/illuminaClipping.fa:2:40:15 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:$MINLEN`;
 }
 
@@ -208,9 +223,11 @@ sub ribosome_removal{
 	#go through input file and report into output file only non-ribosomal sequences
 	while (my $line1 = <INPUT1>) {
 		my $seq1 = <INPUT1> . <INPUT1> . <INPUT1>;
-		my $read1 = substr $line1, 1;
-		chomp $read1;
-		unless (exists $riboreads{$read1}) {
+		my $read2;
+		if ($line1 =~ /^@(\S+)\s/) {
+			$read2 = $1;
+		}
+		unless (exists $riboreads{$read2}) {
 			print OUTPUT1 "$line1", "$seq1";
 		}
 	}
@@ -225,7 +242,35 @@ sub filter_artifact {
 	my ($inputfile) = @_;
 	my $tx = File::Temp->new( UNLINK => 1, SUFFIX => '.fastq' ); # temporary file with hits
 	`fastx_artifacts_filter -i $inputfile -o $tx -Q 33`;
-	`mv $tx $inputfile`;
+	my $wctext = `wc -m $tx`; #word count of the ouptput used to check that fastx ran
+	if ($wctext =~ /^0\s/) {
+		die "There was an error, either fastx_artifacts_filter is not installed or all the sequences were removed as artifacts\n";
+	}
+	else {
+		`mv $tx $inputfile`;
+	}
 }
 
+sub removeunclipped {
+	my ($inputfile, $ulen) = @_;
+	open (INPUT, $inputfile) or die "cannot open file $inputfile\n";
+	my $outputfile = File::Temp->new( UNLINK => 1, SUFFIX => '.fastq' ); # temporary file with good reads
+	open (OUTPUT, ">$outputfile") or die "cannot open output file $outputfile\n";
 
+	while (my $l1 = <INPUT>) {
+		my $l2 = <INPUT>;
+		my $l3 = <INPUT>;
+		my $l4 = <INPUT>;
+
+		chomp $l2;
+		if (length $l2 < $ulen) {
+			print OUTPUT "$l1";
+			print OUTPUT "$l2\n";
+			print OUTPUT "$l3";
+			print OUTPUT "$l4";
+		}
+	}
+
+	close OUTPUT;
+	`mv $outputfile $reads_output`; 
+}
