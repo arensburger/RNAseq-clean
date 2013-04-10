@@ -16,8 +16,9 @@ use File::Path;
 
 # CONSTANTS
 # adapter trimming parameters
-my $TRIMMOMATIC_PATH = "./Trimmomatic-0.20";
-my $RIBOSOME_BOWTIE2_FILE = "./arthropod_ribosomes";
+my $PATH = "/home/peter/scripts/RNAseq-clean";
+my $TRIMMOMATIC_PATH = "$PATH/Trimmomatic-0.20";
+my $RIBOSOME_BOWTIE2_FILE = "$PATH/arthropod_ribosomes";
 my $MINLEN = 26;
 
 # other parameters
@@ -76,6 +77,14 @@ else {
 	open (LOG, ">Log.txt") or die ("cannot create Log.txt");
 }
 
+#determine the length of the first sequence before trimming
+open (INPUT, $readspair1) or die "cannot open file $readspair1\n";
+my $line = <INPUT>;
+$line = <INPUT>;
+chomp $line;
+my $untrimmedlength = length $line; #length of sequences before trimming
+close INPUT;
+
 ########### start cleanning ######################
 print LOG datetime, " Initial count\n";
 print LOG datetime, " File $readspair1, total FASTQ reads: ", count_fastq($readspair1), "\n"; # do a basic count
@@ -91,8 +100,6 @@ print LOG "\n";
 
 #chastity filter
 print LOG datetime, " Applying chastity filter\n";	
-
-#paired file
 # test to see if header of first line is compatible with chastity filter
 open (my $fh, $paired_output) or die("ack -$!");
 my $firstline = <$fh>;
@@ -336,7 +343,13 @@ sub filter_artifact {
 	my ($inputfile) = @_;
 	my $tx = File::Temp->new( UNLINK => 1, SUFFIX => '.fastq' ); # temporary file with hits
 	`fastx_artifacts_filter -i $inputfile -o $tx -Q 33`;
-	`mv $tx $inputfile`;
+	my $wctext = `wc -m $tx`; #word count of the ouptput used to check that fastx ran
+	if ($wctext =~ /^0\s/) {
+		die "There was an error, either fastx_artifacts_filter is not installed or all the sequences were removed as artifacts\n";
+	}
+	else {
+		`mv $tx $inputfile`;
+	}
 }
 
 # from perl cookbook, to put commas on big numbers
@@ -345,3 +358,4 @@ sub commify {
     $text =~ s/(\d\d\d)(?=\d)(?!\d*\.)/$1,/g;
     return scalar reverse $text
 }
+
