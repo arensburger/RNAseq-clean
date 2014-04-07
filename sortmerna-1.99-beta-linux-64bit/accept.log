@@ -1,0 +1,77 @@
+ Mon Apr  7 13:32:09 2014
+
+ SortMeRNA command: ./sortmerna --ref ./rRNA_databases/silva-bac-16s-database-id85.fasta,./index/silva-bac-16s:./rRNA_databases/silva-bac-23s-database-id98.fasta,./index/silva-bac-23s:./rRNA_databases/silva-arc-16s-database-id95.fasta,./index/silva-arc-16s:./rRNA_databases/silva-arc-23s-database-id98.fasta,./index/silva-arc-23s:./rRNA_databases/silva-euk-18s-database-id95.fasta,./index/silva-euk-18s:./rRNA_databases/silva-euk-28s-database-id98.fasta,./index/silva-euk-28s:./rRNA_databases/rfam-5.8s-database-id98.fasta,./index/rfam-5.8s:./rRNA_databases/rfam-5s-database-id98.fasta,./index/rfam-5s --reads ../test1.fq --feeling-lucky --fastx --other other.fq fq -v --aligned accept --sam 
+ Process pid = 7006
+ Parameters summary:
+    Index: ./index/silva-bac-16s
+     Seed length = 18
+     Pass 1 = 18, Pass 2 = 9, Pass 3 = 3
+     Gumbel lambda = 0.602506
+     Gumbel K = 0.328589
+     Minimal SW score based on E-value = 47
+    Index: ./index/silva-bac-23s
+     Seed length = 18
+     Pass 1 = 18, Pass 2 = 9, Pass 3 = 3
+     Gumbel lambda = 0.602275
+     Gumbel K = 0.333737
+     Minimal SW score based on E-value = 47
+    Index: ./index/silva-arc-16s
+     Seed length = 18
+     Pass 1 = 18, Pass 2 = 9, Pass 3 = 3
+     Gumbel lambda = 0.596068
+     Gumbel K = 0.321832
+     Minimal SW score based on E-value = 46
+    Index: ./index/silva-arc-23s
+     Seed length = 18
+     Pass 1 = 18, Pass 2 = 9, Pass 3 = 3
+     Gumbel lambda = 0.596330
+     Gumbel K = 0.324091
+     Minimal SW score based on E-value = 42
+    Index: ./index/silva-euk-18s
+     Seed length = 18
+     Pass 1 = 18, Pass 2 = 9, Pass 3 = 3
+     Gumbel lambda = 0.611988
+     Gumbel K = 0.337232
+     Minimal SW score based on E-value = 46
+    Index: ./index/silva-euk-28s
+     Seed length = 18
+     Pass 1 = 18, Pass 2 = 9, Pass 3 = 3
+     Gumbel lambda = 0.611523
+     Gumbel K = 0.335218
+     Minimal SW score based on E-value = 47
+    Index: ./index/rfam-5.8s
+     Seed length = 18
+     Pass 1 = 18, Pass 2 = 9, Pass 3 = 3
+     Gumbel lambda = 0.617817
+     Gumbel K = 0.340589
+     Minimal SW score based on E-value = 43
+    Index: ./index/rfam-5s
+     Seed length = 18
+     Pass 1 = 18, Pass 2 = 9, Pass 3 = 3
+     Gumbel lambda = 0.616617
+     Gumbel K = 0.341306
+     Minimal SW score based on E-value = 45
+    Number of seeds = 2
+    Edges = 4 (as integer)
+    SW match = 2
+    SW mismatch = -3
+    SW gap open penalty = 5
+    SW gap extend penalty = 2
+    SW ambiguous nucleotide = -3
+    SQ tags are not output
+    Number of threads = 1
+    Reads file = ../test1.fq
+
+ Results:
+    Total reads = 10000
+ By database:
+    aligned reads = 2378 (23.78%)
+    non-aligned reads = 7622
+    ./rRNA_databases/silva-bac-16s-database-id85.fasta		6.49%
+    ./rRNA_databases/silva-bac-23s-database-id98.fasta		2.94%
+    ./rRNA_databases/silva-arc-16s-database-id95.fasta		0.00%
+    ./rRNA_databases/silva-arc-23s-database-id98.fasta		0.00%
+    ./rRNA_databases/silva-euk-18s-database-id95.fasta		5.32%
+    ./rRNA_databases/silva-euk-28s-database-id98.fasta		7.33%
+    ./rRNA_databases/rfam-5.8s-database-id98.fasta		0.00%
+    ./rRNA_databases/rfam-5s-database-id98.fasta		1.70%

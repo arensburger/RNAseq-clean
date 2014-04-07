@@ -5,6 +5,7 @@
 # Fri 06 Jul 2012 10:57:13 AM PDT added a test to see if data is ok for chastity filter
 # Sept/Oct 2012 modified the ribosome matching to accomodate spaces
 # Fri 05 Oct 2012 12:59:25 PM PDT changed output to comma separated
+# April 2014 now using SortMeRNA as ribosome removal program, updated Trimmomatic
 
 use strict;
 require File::Temp;
@@ -16,18 +17,18 @@ use File::Path;
 
 # CONSTANTS
 # adapter trimming parameters
-my $PATH = "/home/peter/scripts/RNAseq-clean";
-my $TRIMMOMATIC_PATH = "$PATH/Trimmomatic-0.20";
-my $RIBOSOME_BOWTIE2_FILE = "$PATH/arthropod_ribosomes";
-my $MINLEN = 26;
+my $TRIMMOMATIC_PATH = "./Trimmomatic-0.32"; # java program location
+my $SORTMELOC = "/home/parensburge/Desktop/RNAseq-clean/sortmerna-1.99-beta-linux-64bit"; # must keep full path name for sortme program
+my $MINLEN = 35;
 
 # other parameters
 my $readspair1; #filename of first pair fastq
 my $readspair2; #filename of second pair fastq file
 my $outputname; #base name for output files
 my $outputdir; #outputdirectory
-my $threads = 1; #number of threads to use
-
+my $threads = `grep -c processor /proc/cpuinfo`; #number of threads to use
+$threads =~ s/\s//g
+;
 #return date and time
 sub datetime {
 	use POSIX qw/strftime/;
@@ -98,34 +99,7 @@ print LOG datetime, " File with paired reads, FASTQ reads: ", count_fastq($paire
 print LOG datetime, " File with unpaired reads, FASTQ reads: ", count_fastq($unpaired_output), "\n";
 print LOG "\n";
 
-#chastity filter
-print LOG datetime, " Applying chastity filter\n";	
-# test to see if header of first line is compatible with chastity filter
-open (my $fh, $paired_output) or die("ack -$!");
-my $firstline = <$fh>;
-if ($firstline =~ /:Y\s$/) {
-	filter_chastity_pair($paired_output);
-	print LOG datetime, " File with paired reads, FASTQ reads: ", count_fastq($paired_output), "\n";
-}
-else {
-	print LOG " Chastity filter not applied to paired reads file\n";
-}
-close $fh;
-
-# test to see if header of first line is compatible with chastity filter
-open (my $fh, $unpaired_output) or die("ack -$!");
-my $firstline = <$fh>;
-if ($firstline =~ /:\S\s$/) {
-	filter_chastity($unpaired_output);
-	print LOG datetime, " File with unpaired reads, FASTQ reads: ", count_fastq($unpaired_output), "\n";
-}
-else {
-	print LOG " Chastity filter not applied to unpaired reads file\n";
-}
-close $fh;
-
-print LOG "\n";
-
+#print LOG "\n";
 #artifact filter
 print LOG datetime, " Removing artifacts from unpaired file only\n";
 filter_artifact($unpaired_output);
@@ -133,7 +107,7 @@ print LOG datetime, " File with unpaired reads, FASTQ reads: ", count_fastq($unp
 print LOG "\n";
 
 #remove ribosomal sequence
-print LOG datetime, " Removing ribosomal sequences\n";
+print LOG datetime, " Removing ribosomal sequences using SortMeRNA\n";
 ribosome_removal($paired_output, 1);
 print LOG datetime, " File with paired reads, FASTQ reads: ", count_fastq($paired_output), "\n";
 ribosome_removal($unpaired_output, 0);
@@ -248,8 +222,8 @@ sub clipadapters {
 	my $forward_unpaired = File::Temp->new( UNLINK => 1, SUFFIX => '.fastq' );
 	my $reverse_unpaired = File::Temp->new( UNLINK => 1, SUFFIX => '.fastq' ); 
 
-	`java -classpath $TRIMMOMATIC_PATH/trimmomatic-0.20.jar org.usadellab.trimmomatic.TrimmomaticPE -threads $threads -phred33 $inputfile1 $inputfile2 $forward_paired $forward_unpaired $reverse_paired $reverse_unpaired ILLUMINACLIP:$TRIMMOMATIC_PATH/illuminaClipping.fa:2:40:15 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:$MINLEN`;
-
+	`java -jar $TRIMMOMATIC_PATH/trimmomatic-0.32.jar PE -threads $threads -phred33 $inputfile1 $inputfile2 $forward_paired $forward_unpaired $reverse_paired $reverse_unpaired ILLUMINACLIP:$TRIMMOMATIC_PATH/illuminaClipping.fa:2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:$MINLEN`;
+	
 	#merge the files
 	open (INPUT1, $forward_paired) or die;
 	open (INPUT2, $reverse_paired) or die;
@@ -269,74 +243,19 @@ sub clipadapters {
 sub ribosome_removal{
 	my ($infile, $paired) = @_;
 	open (INPUT1, $infile) or die "cannot open file $infile\n";
-        my $ribooutput = File::Temp->new( UNLINK => 1, SUFFIX => '.fastq' );
-	open (OUTPUT1, ">$ribooutput") or die;
+        my $ribooutput = File::Temp->new( UNLINK => 1);
+	my $ribooutput2 = File::Temp->new( UNLINK => 1);
 
-	my $tx = File::Temp->new( UNLINK => 1, SUFFIX => '.sam' ); # temporary file with hits
-	`bowtie2 -x $RIBOSOME_BOWTIE2_FILE -U $infile -S $tx -p $threads --local -k 1 --sam-nohead --sam-nosq`;
-	if ($? == -1) {
-		warn "WARNING: bowtie2 program not found, continuing nontheless";
-	}	
-
-	#record the names of the files that matched
-	open (INPUT2, $tx) or die "cannot open output of bowtie $tx";
-	my %riboreads; #holds as key the reads that are ribosomes
-	while (my $line = <INPUT2>) {
-		if ($line =~ /^(\S+)\s\S+\s(\S+)\s/) {
-			my $hit = $2;
-			my $name = $1;
-			unless ($hit =~ /\*/){
-				$riboreads{$name} = 0;
-			}
-		}
-		else {
-			die "error reading sam line of file $tx at line\n$line";
-		}
+	if ($paired) {
+		`$SORTMELOC/sortmerna --ref $SORTMELOC/rRNA_databases/silva-bac-16s-database-id85.fasta,$SORTMELOC/index/silva-bac-16s:$SORTMELOC/rRNA_databases/silva-bac-23s-database-id98.fasta,$SORTMELOC/index/silva-bac-23s:$SORTMELOC/rRNA_databases/silva-arc-16s-database-id95.fasta,$SORTMELOC/index/silva-arc-16s:$SORTMELOC/rRNA_databases/silva-arc-23s-database-id98.fasta,$SORTMELOC/index/silva-arc-23s:$SORTMELOC/rRNA_databases/silva-euk-18s-database-id95.fasta,$SORTMELOC/index/silva-euk-18s:$SORTMELOC/rRNA_databases/silva-euk-28s-database-id98.fasta,$SORTMELOC/index/silva-euk-28s:$SORTMELOC/rRNA_databases/rfam-5.8s-database-id98.fasta,$SORTMELOC/index/rfam-5.8s:$SORTMELOC/rRNA_databases/rfam-5s-database-id98.fasta,$SORTMELOC/index/rfam-5s --reads $infile --feeling-lucky --other $ribooutput2 --log -v -a $threads --paired_out --fastx --aligned $ribooutput --sam`; 
+		my $tempname = "$ribooutput2" . ".fastq"; #necessary because sortmeRNA adds .fastq to the output file without asking
+		`mv $tempname $paired_output`;
 	}
-	close INPUT2;
-
-	#go through input file and report into output file only non-ribosomal sequences
-	if ($paired) { #paired case
-		while (my $line1 = <INPUT1>) {
-			my $seq1 = <INPUT1> . <INPUT1> . <INPUT1>;
-			my $seq2 = <INPUT1> . <INPUT1> . <INPUT1> . <INPUT1>;
-
-
-			my $read1; #tailor the name to match what bowtie does
-			if ($line1 =~ /^@(\S+)\s/) {
-				$read1 = $1;
-			}
-			else {
-				die "unexpted input line\n$line1";
-			}
-
-			unless (exists $riboreads{$read1}) {
-				print OUTPUT1 "$line1", "$seq1", "$seq2";
-			}	
-		}
-		`mv $ribooutput $paired_output`; 
+	else {
+		`$SORTMELOC/sortmerna --ref $SORTMELOC/rRNA_databases/silva-bac-16s-database-id85.fasta,$SORTMELOC/index/silva-bac-16s:$SORTMELOC/rRNA_databases/silva-bac-23s-database-id98.fasta,$SORTMELOC/index/silva-bac-23s:$SORTMELOC/rRNA_databases/silva-arc-16s-database-id95.fasta,$SORTMELOC/index/silva-arc-16s:$SORTMELOC/rRNA_databases/silva-arc-23s-database-id98.fasta,$SORTMELOC/index/silva-arc-23s:$SORTMELOC/rRNA_databases/silva-euk-18s-database-id95.fasta,$SORTMELOC/index/silva-euk-18s:$SORTMELOC/rRNA_databases/silva-euk-28s-database-id98.fasta,$SORTMELOC/index/silva-euk-28s:$SORTMELOC/rRNA_databases/rfam-5.8s-database-id98.fasta,$SORTMELOC/index/rfam-5.8s:$SORTMELOC/rRNA_databases/rfam-5s-database-id98.fasta,$SORTMELOC/index/rfam-5s --reads $infile --feeling-lucky --other $ribooutput2 --log -v -a $threads --fastx --aligned $ribooutput --sam`; 
+		my $tempname = "$ribooutput2" . ".fastq"; #necessary because sortmeRNA adds .fastq to the output file without asking
+		`mv $tempname $unpaired_output`;
 	}
-	else { #unpaired
-		while (my $line1 = <INPUT1>) {
-			my $seq1 = <INPUT1> . <INPUT1> . <INPUT1>;
-
-			my $read1; #tailor the name to match what bowtie does
-                        if ($line1 =~ /^@(\S+)\s/) {
-                                $read1 = $1;
-                        }
-                        else {
-                                die "unexpted input line\n$line1";
-                        }
-
-			unless (exists $riboreads{$read1}) {
-				print OUTPUT1 "$line1", "$seq1";
-			}
-		}
-		
-		`mv $ribooutput $unpaired_output`;
-	}
-	close INPUT1;
-	close OUTPUT1;
 }
 
 sub filter_artifact {
