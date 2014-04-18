@@ -108,6 +108,7 @@ print LOG "\n";
 
 #remove ribosomal sequence
 print LOG datetime, " Removing ribosomal sequences using SortMeRNA\n";
+`cp $paired_output t5`;
 ribosome_removal($paired_output, 1);
 print LOG datetime, " File with paired reads, FASTQ reads: ", count_fastq($paired_output), "\n";
 ribosome_removal($unpaired_output, 0);
@@ -245,14 +246,42 @@ sub ribosome_removal{
 	open (INPUT1, $infile) or die "cannot open file $infile\n";
         my $ribooutput = File::Temp->new( UNLINK => 1);
 	my $ribooutput2 = File::Temp->new( UNLINK => 1);
-
 	if ($paired) {
-		`$SORTMELOC/sortmerna --ref $SORTMELOC/rRNA_databases/silva-bac-16s-database-id85.fasta,$SORTMELOC/index/silva-bac-16s:$SORTMELOC/rRNA_databases/silva-bac-23s-database-id98.fasta,$SORTMELOC/index/silva-bac-23s:$SORTMELOC/rRNA_databases/silva-arc-16s-database-id95.fasta,$SORTMELOC/index/silva-arc-16s:$SORTMELOC/rRNA_databases/silva-arc-23s-database-id98.fasta,$SORTMELOC/index/silva-arc-23s:$SORTMELOC/rRNA_databases/silva-euk-18s-database-id95.fasta,$SORTMELOC/index/silva-euk-18s:$SORTMELOC/rRNA_databases/silva-euk-28s-database-id98.fasta,$SORTMELOC/index/silva-euk-28s:$SORTMELOC/rRNA_databases/rfam-5.8s-database-id98.fasta,$SORTMELOC/index/rfam-5.8s:$SORTMELOC/rRNA_databases/rfam-5s-database-id98.fasta,$SORTMELOC/index/rfam-5s --reads $infile --feeling-lucky --other $ribooutput2 --log -v -a $threads --paired_out --fastx --aligned $ribooutput --sam`; 
+`cp $infile t6`;
+		`$SORTMELOC/sortmerna --ref $SORTMELOC/rRNA_databases/silva-bac-16s-database-id85.fasta,$SORTMELOC/index/silva-bac-16s:$SORTMELOC/rRNA_databases/silva-bac-23s-database-id98.fasta,$SORTMELOC/index/silva-bac-23s:$SORTMELOC/rRNA_databases/silva-arc-16s-database-id95.fasta,$SORTMELOC/index/silva-arc-16s:$SORTMELOC/rRNA_databases/silva-arc-23s-database-id98.fasta,$SORTMELOC/index/silva-arc-23s:$SORTMELOC/rRNA_databases/silva-euk-18s-database-id95.fasta,$SORTMELOC/index/silva-euk-18s:$SORTMELOC/rRNA_databases/silva-euk-28s-database-id98.fasta,$SORTMELOC/index/silva-euk-28s:$SORTMELOC/rRNA_databases/rfam-5.8s-database-id98.fasta,$SORTMELOC/index/rfam-5.8s:$SORTMELOC/rRNA_databases/rfam-5s-database-id98.fasta,$SORTMELOC/index/rfam-5s --reads $infile --feeling-lucky --other $ribooutput2 -a $threads --paired_out --fastx --sam --aligned $ribooutput`; 
+
+		#sortme still leaves unmatched pairs, this tries to remove them and put them into the unpaired file
 		my $tempname = "$ribooutput2" . ".fastq"; #necessary because sortmeRNA adds .fastq to the output file without asking
-		`mv $tempname $paired_output`;
+		my $ref1;
+		my $ref2;
+		open (INPUT, $tempname) or die;
+		open (OUTPUT1, ">$paired_output") or die;
+		open (OUTPUT2, ">$unpaired_output") or die;
+		(my $ref1) = <INPUT> =~ /\A([^\s]+)/; # get the first word, from http://stackoverflow.com/questions/4973229/perl-get-first-word-from-input-string
+		my $ref2  = <INPUT> . <INPUT> . <INPUT>;
+		while ((my $l1) = <INPUT> =~ /\A([^\s]+)/) {
+			my $l2 = <INPUT> . <INPUT> . <INPUT>;
+			if ($ref1 eq $l1) {
+				print OUTPUT1 "$ref1\n";
+				print OUTPUT1 $ref2;
+				print OUTPUT1 "$l1\n";
+				print OUTPUT1 $l2;
+				$ref1 = $l1;
+				$ref2 = $l2;
+			}
+			else {
+				print OUTPUT2 "$ref1\n";
+				print OUTPUT2 $ref2;
+				$ref1 = $l1;
+				$ref2 = $l2;
+			}	
+		}
+		close INPUT;
+		close OUTPUT1;
+		close OUTPUT2;
 	}
 	else {
-		`$SORTMELOC/sortmerna --ref $SORTMELOC/rRNA_databases/silva-bac-16s-database-id85.fasta,$SORTMELOC/index/silva-bac-16s:$SORTMELOC/rRNA_databases/silva-bac-23s-database-id98.fasta,$SORTMELOC/index/silva-bac-23s:$SORTMELOC/rRNA_databases/silva-arc-16s-database-id95.fasta,$SORTMELOC/index/silva-arc-16s:$SORTMELOC/rRNA_databases/silva-arc-23s-database-id98.fasta,$SORTMELOC/index/silva-arc-23s:$SORTMELOC/rRNA_databases/silva-euk-18s-database-id95.fasta,$SORTMELOC/index/silva-euk-18s:$SORTMELOC/rRNA_databases/silva-euk-28s-database-id98.fasta,$SORTMELOC/index/silva-euk-28s:$SORTMELOC/rRNA_databases/rfam-5.8s-database-id98.fasta,$SORTMELOC/index/rfam-5.8s:$SORTMELOC/rRNA_databases/rfam-5s-database-id98.fasta,$SORTMELOC/index/rfam-5s --reads $infile --feeling-lucky --other $ribooutput2 --log -v -a $threads --fastx --aligned $ribooutput --sam`; 
+		`$SORTMELOC/sortmerna --ref $SORTMELOC/rRNA_databases/silva-bac-16s-database-id85.fasta,$SORTMELOC/index/silva-bac-16s:$SORTMELOC/rRNA_databases/silva-bac-23s-database-id98.fasta,$SORTMELOC/index/silva-bac-23s:$SORTMELOC/rRNA_databases/silva-arc-16s-database-id95.fasta,$SORTMELOC/index/silva-arc-16s:$SORTMELOC/rRNA_databases/silva-arc-23s-database-id98.fasta,$SORTMELOC/index/silva-arc-23s:$SORTMELOC/rRNA_databases/silva-euk-18s-database-id95.fasta,$SORTMELOC/index/silva-euk-18s:$SORTMELOC/rRNA_databases/silva-euk-28s-database-id98.fasta,$SORTMELOC/index/silva-euk-28s:$SORTMELOC/rRNA_databases/rfam-5.8s-database-id98.fasta,$SORTMELOC/index/rfam-5.8s:$SORTMELOC/rRNA_databases/rfam-5s-database-id98.fasta,$SORTMELOC/index/rfam-5s --reads $infile --feeling-lucky --other $ribooutput2 -a $threads --fastx --aligned $ribooutput --sam`; 
 		my $tempname = "$ribooutput2" . ".fastq"; #necessary because sortmeRNA adds .fastq to the output file without asking
 		`mv $tempname $unpaired_output`;
 	}
