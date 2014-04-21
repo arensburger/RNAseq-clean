@@ -124,9 +124,9 @@ print LOG "\n";
 
 #print quality results
 #print datetime, " quality statistics not produced, need to install gnuplot\n";
-print LOG datetime, " Producing quality statistics\n";
-print LOG datetime, " Paired file quality boxplot and nucleotide distributions are in directory $outputdir in files: ", stats1($pairedoutname), " \n";
-print LOG datetime, " Unaired file quality boxplot and nucleotide distributions are in directory $outputdir in files: ", stats1($unpairedoutname), " \n";
+#print LOG datetime, " Producing quality statistics\n";
+#print LOG datetime, " Paired file quality boxplot and nucleotide distributions are in directory $outputdir in files: ", stats1($pairedoutname), " \n";
+#print LOG datetime, " Unaired file quality boxplot and nucleotide distributions are in directory $outputdir in files: ", stats1($unpairedoutname), " \n";
 
 
 ######## subroutines ###################
