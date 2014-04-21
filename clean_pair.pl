@@ -18,7 +18,7 @@ use File::Path;
 # CONSTANTS
 # adapter trimming parameters
 my $TRIMMOMATIC_PATH = "./Trimmomatic-0.32"; # java program location
-my $SORTMELOC = "/home/parensburge/Desktop/RNAseq-clean/sortmerna-1.99-beta-linux-64bit"; # must keep full path name for sortme program
+my $SORTMELOC = "./sortmerna-1.99-beta-linux-64bit"; # must keep full path name for sortme program
 my $MINLEN = 35;
 
 # other parameters
@@ -247,7 +247,6 @@ sub ribosome_removal{
         my $ribooutput = File::Temp->new( UNLINK => 1);
 	my $ribooutput2 = File::Temp->new( UNLINK => 1);
 	if ($paired) {
-`cp $infile t6`;
 		`$SORTMELOC/sortmerna --ref $SORTMELOC/rRNA_databases/silva-bac-16s-database-id85.fasta,$SORTMELOC/index/silva-bac-16s:$SORTMELOC/rRNA_databases/silva-bac-23s-database-id98.fasta,$SORTMELOC/index/silva-bac-23s:$SORTMELOC/rRNA_databases/silva-arc-16s-database-id95.fasta,$SORTMELOC/index/silva-arc-16s:$SORTMELOC/rRNA_databases/silva-arc-23s-database-id98.fasta,$SORTMELOC/index/silva-arc-23s:$SORTMELOC/rRNA_databases/silva-euk-18s-database-id95.fasta,$SORTMELOC/index/silva-euk-18s:$SORTMELOC/rRNA_databases/silva-euk-28s-database-id98.fasta,$SORTMELOC/index/silva-euk-28s:$SORTMELOC/rRNA_databases/rfam-5.8s-database-id98.fasta,$SORTMELOC/index/rfam-5.8s:$SORTMELOC/rRNA_databases/rfam-5s-database-id98.fasta,$SORTMELOC/index/rfam-5s --reads $infile --feeling-lucky --other $ribooutput2 -a $threads --paired_out --fastx --sam --aligned $ribooutput`; 
 
 		#sortme still leaves unmatched pairs, this tries to remove them and put them into the unpaired file
