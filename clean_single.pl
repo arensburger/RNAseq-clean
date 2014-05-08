@@ -1,48 +1,53 @@
-#! /usr/bin/perl
+#!/usr/bin/perl
 # Wed 21 Mar 2012 02:30:34 PM PDT automates initial library prep
 # Fri 23 Mar 2012 10:17:03 AM PDT modified to work with a pair of libraries
-# Thu 19 Apr 2012 02:27:00 PM PDT updated to clean single file
+# Wed 04 Jul 2012 08:07:18 AM PDT modified to work on hbar, removed Temp:seekable dependance and prevented making graphs because system lacks "gnuplot" library
+# Fri 06 Jul 2012 10:57:13 AM PDT added a test to see if data is ok for chastity filter
+# Sept/Oct 2012 modified the ribosome matching to accomodate spaces
+# Fri 05 Oct 2012 12:59:25 PM PDT changed output to comma separated
+# April 2014 now using SortMeRNA as ribosome removal program, updated Trimmomatic
+# May 2014 modified the paired version to this one for unpaired
+
+use strict;
+require File::Temp;
+use File::Temp ();
+use File::Basename;
+use Getopt::Long;
+use File::Path;
 
 # CONSTANTS
 # adapter trimming parameters
-my $TRIMMOMATIC_PATH = "./Trimmomatic-0.20";
-my $RIBOSOME_BOWTIE2_FILE = "./arthropod_ribosomes";
-my $MINLEN = 26;
+my $TRIMMOMATIC_PATH = "./Trimmomatic-0.32"; # java program location
+my $SORTMELOC = "/home/arensburger/scripts/RNAseq-clean/sortmerna-1.99-beta-linux-64bit"; # must keep full path name for sortme program
+my $MINLEN = 35;
 
+# other parameters
+my $readspair1; #filename of first pair fastq
+my $outputname; #base name for output files
+my $outputdir; #outputdirectory
+my $threads = `grep -c processor /proc/cpuinfo`; #number of threads to use
+$threads =~ s/\s//g
+;
 #return date and time
 sub datetime {
 	use POSIX qw/strftime/;
 	return (strftime('%D %T',localtime));
 }
 
-#### Main program
-use strict;
-require File::Temp;
-use File::Temp ();
-use File::Temp qw/ :seekable /;
-use File::Basename;
-use Getopt::Long;
-use File::Path;
-
-# other parameters
-my $reads; #filename of first pair fastq
-my $outputname; #base name for output files
-my $outputdir; #outputdirectory
-my $threads=1; #number of threads to use
-
 #####read and check the inputs
 GetOptions(
-	'r:s'   => \$reads,
+	'1:s'   => \$readspair1,
+#	'2:s'	=> \$readspair2,
 	'o:s'	=> \$outputname,
 	'd:s'	=> \$outputdir,
-	't:s'   => \$threads
+	't:s'   => \$threads,
 );
 
-unless ($reads) {
-	die ("usage: perl clean_sinlge.pl -r <FASTQ file> -o <OPTIONAL output name> -d <OPTIONAL directory name for output> -t <OPTIONAL: number of threads to use, default $threads>\n");
+unless ($readspair1) {
+	die ("usage: perl clean_pair.pl -1 <FASTQ file> -o <OPTIONAL output name> -d <OPIONAL output directory (default current directory)> -t <OPTIONAL: number of threads to use, default $threads>\n");
 }
 unless ($outputname) {
-	$outputname = basename($reads, ".fastq");
+	$outputname = basename($readspair1, ".fastq"); #take the name from first member of the pair
 }
 
 #test if output directory has been specified, if not set output to current directoy
@@ -60,8 +65,8 @@ unless ( -e $outputdir )
 	}
 }
 
-#create temporary files
-my $reads_output = File::Temp->new( UNLINK => 1, SUFFIX => '.fastq' ); # temporary file with chastity results
+#create temporary files remove paired
+my $unpaired_output = File::Temp->new( UNLINK => 1, SUFFIX => '.fastq' ); # temporary file with chastity results pair1
 
 #create log file
 if ( -e $outputdir) {
@@ -71,79 +76,42 @@ else {
 	open (LOG, ">Log.txt") or die ("cannot create Log.txt");
 }
 
-#determine the length of the first sequence before trimming
-open (INPUT, $reads) or die "cannot open file $reads\n";
-my $line = <INPUT>;
-$line = <INPUT>;
-chomp $line;
-my $untrimmedlength = length $line; #length of sequences before trimming
-close INPUT;
-
 ########### start cleanning ######################
 print LOG datetime, " Initial count\n";
-print LOG datetime, " File $reads, total FASTQ reads: ", count_fastq($reads), "\n"; # do a basic count
-print LOG "\n";
+print LOG datetime, " File $readspair1, total FASTQ reads: ", count_fastq($readspair1), "\n"; # do a basic count
 
 #clip adapters
 print LOG datetime, " Clipping adapters and quality filter with Trimmomatic\n";
-clipadapters($reads);
-print LOG datetime, " File with reads, FASTQ reads: ", count_fastq($reads_output), "\n"; 
+clipadapters($readspair1);
+print LOG datetime, " File with unpaired reads, FASTQ reads: ", count_fastq($unpaired_output), "\n";
 print LOG "\n";
 
-#remove sequences that were not clipped
-print LOG datetime, " Removing sequences that did NOT have a recognisable adapter sequence\n";
-removeunclipped($reads_output, $untrimmedlength);
-print LOG datetime, " After removing sequences that do not have adapter sequences left: ", count_fastq($reads_output), "\n";
-
-# test to see if header of first line is compatible with chastity filter
-open (my $fh, $reads_output) or die("ack -$!");
-my $firstline = <$fh>;
-if ($firstline =~ /:\S\s$/) {
-	print LOG datetime, " Applying chastity filter\n";
-	filter_chastity($reads_output);
-	print LOG datetime, " File with reads, FASTQ reads: ", count_fastq($reads_output), "\n";
-}
-else {
-	print LOG datetime, " Chastity filter not applied\n";
-}
-close $fh;
-
-#
-##chastity filter
-#print LOG datetime, " Applying chastity filter\n";
-#filter_chastity($reads_output);
-#print LOG datetime, " File with reads, FASTQ reads: ", count_fastq($reads_output), "\n";
-#print "\n";
-
 #artifact filter
-print LOG datetime, " Removing artifacts\n";
-filter_artifact($reads_output);
-print LOG datetime, " File with reads, FASTQ reads: ", count_fastq($reads_output), "\n";
+print LOG datetime, " Removing artifacts from unpaired file\n";
+filter_artifact($unpaired_output);
+print LOG datetime, " File with unpaired reads, FASTQ reads: ", count_fastq($unpaired_output), "\n";
 print LOG "\n";
 
 #remove ribosomal sequence
-print LOG datetime, " Removing ribosomal sequences\n";
-ribosome_removal($reads_output, 0);
-print LOG datetime, " File with reads, FASTQ reads: ", count_fastq($reads_output), "\n";
+print LOG datetime, " Removing ribosomal sequences using SortMeRNA\n";
+ribosome_removal($unpaired_output);
+print LOG datetime, " File with unpaired reads, FASTQ reads: ", count_fastq($unpaired_output), "\n";
 
-#print the data files
-my $readsoutname = $outputdir . "/" . $outputname .  ".fq"; 
-`mv $reads_output $readsoutname`; 
-print LOG datetime, " Processed file is written in $readsoutname\n";
+#print the data files 
+my $unpairedoutname = $outputdir . "/" . $outputname .  "-unpaired.fq";
+#`mv $paired_output $pairedoutname`; 
+`mv $unpaired_output $unpairedoutname`;
+print LOG datetime, " Data file are written in $unpairedoutname\n";
 print LOG "\n";
 
-#print quality results
-print LOG datetime, " Producing quality statistics\n";
-print LOG datetime, " Quality boxplot and nucleotide distributions are in directory $outputdir in files: ", stats1($readsoutname), " \n";
+##print quality results
+##print datetime, " quality statistics not produced, need to install gnuplot\n";
+#print LOG datetime, " Producing quality statistics\n";
+#print LOG datetime, " Paired file quality boxplot and nucleotide distributions are in directory $outputdir in files: ", stats1($pairedoutname), " \n";
+#print LOG datetime, " Unaired file quality boxplot and nucleotide distributions are in directory $outputdir in files: ", stats1($unpairedoutname), " \n";
 
-sub clipadapters {
-#       print STDERRR "clipping adapters...\n"; 
-        my ($inputfile1) = @_;
-        my $outputfile1 = File::Temp->new( UNLINK => 1, SUFFIX => '.fastq' );
 
-	#run trimmomatic
-        `java -classpath $TRIMMOMATIC_PATH/trimmomatic-0.20.jar org.usadellab.trimmomatic.TrimmomaticSE -threads $threads -phred33 $inputfile1 $reads_output ILLUMINACLIP:$TRIMMOMATIC_PATH/illuminaClipping.fa:2:40:15 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:$MINLEN`;
-}
+######## subroutines ###################
 
 sub stats1 {
 	my ($inputfile) = @_;
@@ -157,27 +125,6 @@ sub stats1 {
 	return ($boxfilename . ", " . $nucfilename);
 }
 
-sub filter_chastity {
-	my ($inputfile) = @_;
-	open (INPUT, $inputfile) or die "cannot open file $inputfile\n";
-	my $chasoutput = File::Temp->new( UNLINK => 1, SUFFIX => '.fastq' );
-	open (OUTPUT, ">$chasoutput") or die "cannot open output file $chasoutput\n";
-	while (my $line = <INPUT>) {
-		if ($line =~ /^@/) {
-			my $seq = $line . <INPUT> . <INPUT> . <INPUT>;
-			if (($line =~ /:Y\s$/) || ($line =~ /:Y\/\d\s$/)) {
-				print OUTPUT "$seq";
-			}
-		}
-		else {
-			die "file $inputfile does not match FASTQ at line:\n$line";
-		}
-	}
-	close INPUT;
-	close OUTPUT;
-	`mv $chasoutput $reads_output`;
-}
-
 sub count_fastq {
 #	print STDERR "count fastq...\n";
 	my ($title) = @_;
@@ -186,7 +133,8 @@ sub count_fastq {
 	my $txtcount = `wc -l $title`;
 	if ($txtcount =~ /^(\d+)\s/) {
 		my $count = $1/4;
-		return(sprintf('%.3e', $count));
+		return (commify($count));
+#		return(sprintf('%.3e', $count));
 #		return ($count);
 	}
 	else {
@@ -194,48 +142,34 @@ sub count_fastq {
 	}
 }
 
-sub ribosome_removal{
-	my ($infile, $paired) = @_;
-	open (INPUT1, $infile) or die "cannot open file $infile\n";
-        my $ribooutput = File::Temp->new( UNLINK => 1, SUFFIX => '.fastq' );
-	open (OUTPUT1, ">$ribooutput") or die;
+sub clipadapters {
+	my ($inputfile1) = @_;
+	my $forward_unpaired = File::Temp->new( UNLINK => 1, SUFFIX => '.fastq' );
 
-	my $tx = File::Temp->new( UNLINK => 1, SUFFIX => '.sam' ); # temporary file with hits
-	`bowtie2 -x $RIBOSOME_BOWTIE2_FILE -U $infile -S $tx -p $threads --local -k 1 --sam-nohead --sam-nosq`;
-
-	#record the names of the files that matched
-	open (INPUT2, $tx) or die "cannot open output of bowtie $tx";
-	my %riboreads; #holds as key the reads that are ribosomes
-	while (my $line = <INPUT2>) {
-		if ($line =~ /^(\S+)\s\S+\s(\S+)\s/) {
-			my $hit = $2;
-			my $name = $1;
-			unless ($hit =~ /\*/){
-				$riboreads{$name} = 0;
-			}
-		}
-		else {
-			die "error reading sam line of file $tx at line\n$line";
-		}
-	}
-	close INPUT2;
-
-	#go through input file and report into output file only non-ribosomal sequences
-	while (my $line1 = <INPUT1>) {
-		my $seq1 = <INPUT1> . <INPUT1> . <INPUT1>;
-		my $read2;
-		if ($line1 =~ /^@(\S+)\s/) {
-			$read2 = $1;
-		}
-		unless (exists $riboreads{$read2}) {
-			print OUTPUT1 "$line1", "$seq1";
-		}
-	}
+	`java -jar $TRIMMOMATIC_PATH/trimmomatic-0.32.jar SE -threads $threads -phred33 $inputfile1 $forward_unpaired ILLUMINACLIP:$TRIMMOMATIC_PATH/illuminaClipping.fa:2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:$MINLEN`;
 	
-	`mv $ribooutput $reads_output`;
-
+	#merge the files
+	open (INPUT1, $forward_unpaired) or die;
+	open (OUTPUT1, ">$unpaired_output") or die;
+	while (my $line1 = <INPUT1>) {
+		my $seq1 = $line1 . <INPUT1> . <INPUT1> . <INPUT1>;
+		print OUTPUT1 "$seq1";
+	}	
 	close INPUT1;
-	close OUTPUT1;
+	close OUTPUT1; 
+}
+
+sub ribosome_removal{
+	my ($infile) = @_;
+	open (INPUT1, $infile) or die "cannot open file $infile\n";
+        my $ribooutput = File::Temp->new( UNLINK => 1);
+	my $ribooutput2 = File::Temp->new( UNLINK => 1);
+	
+	`$SORTMELOC/sortmerna --ref $SORTMELOC/rRNA_databases/silva-bac-16s-database-id85.fasta,$SORTMELOC/index/silva-bac-16s:$SORTMELOC/rRNA_databases/silva-bac-23s-database-id98.fasta,$SORTMELOC/index/silva-bac-23s:$SORTMELOC/rRNA_databases/silva-arc-16s-database-id95.fasta,$SORTMELOC/index/silva-arc-16s:$SORTMELOC/rRNA_databases/silva-arc-23s-database-id98.fasta,$SORTMELOC/index/silva-arc-23s:$SORTMELOC/rRNA_databases/silva-euk-18s-database-id95.fasta,$SORTMELOC/index/silva-euk-18s:$SORTMELOC/rRNA_databases/silva-euk-28s-database-id98.fasta,$SORTMELOC/index/silva-euk-28s:$SORTMELOC/rRNA_databases/rfam-5.8s-database-id98.fasta,$SORTMELOC/index/rfam-5.8s:$SORTMELOC/rRNA_databases/rfam-5s-database-id98.fasta,$SORTMELOC/index/rfam-5s --reads $infile --feeling-lucky --other $ribooutput2 -a $threads --fastx --aligned $ribooutput --sam`; 
+
+	my $tempname = "$ribooutput2" . ".fastq"; #necessary because sortmeRNA adds .fastq to the output file without asking
+	`mv $tempname $unpaired_output`;
+	
 }
 
 sub filter_artifact {
@@ -251,26 +185,10 @@ sub filter_artifact {
 	}
 }
 
-sub removeunclipped {
-	my ($inputfile, $ulen) = @_;
-	open (INPUT, $inputfile) or die "cannot open file $inputfile\n";
-	my $outputfile = File::Temp->new( UNLINK => 1, SUFFIX => '.fastq' ); # temporary file with good reads
-	open (OUTPUT, ">$outputfile") or die "cannot open output file $outputfile\n";
-
-	while (my $l1 = <INPUT>) {
-		my $l2 = <INPUT>;
-		my $l3 = <INPUT>;
-		my $l4 = <INPUT>;
-
-		chomp $l2;
-		if (length $l2 < $ulen) {
-			print OUTPUT "$l1";
-			print OUTPUT "$l2\n";
-			print OUTPUT "$l3";
-			print OUTPUT "$l4";
-		}
-	}
-
-	close OUTPUT;
-	`mv $outputfile $reads_output`; 
+# from perl cookbook, to put commas on big numbers
+sub commify {
+    my $text = reverse $_[0];
+    $text =~ s/(\d\d\d)(?=\d)(?!\d*\.)/$1,/g;
+    return scalar reverse $text
 }
+

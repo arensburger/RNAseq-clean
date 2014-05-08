@@ -18,7 +18,7 @@ use File::Path;
 # CONSTANTS
 # adapter trimming parameters
 my $TRIMMOMATIC_PATH = "./Trimmomatic-0.32"; # java program location
-my $SORTMELOC = "./sortmerna-1.99-beta-linux-64bit"; # must keep full path name for sortme program
+my $SORTMELOC = "/home/parensburge/Desktop/RNAseq-clean/sortmerna-1.99-beta-linux-64bit"; # must keep full path name for sortme program
 my $MINLEN = 35;
 
 # other parameters
@@ -67,8 +67,8 @@ unless ( -e $outputdir )
 }
 
 #create temporary files
-my $paired_output = File::Temp->new( UNLINK => 1, SUFFIX => '.fastq' ); # temporary file with chastity results pair1
-my $unpaired_output = File::Temp->new( UNLINK => 1, SUFFIX => '.fastq' ); # temporary file with chastity results pair1
+my $paired_output = File::Temp->new( UNLINK => 1, SUFFIX => '.fastq' ); # temporary file with results pair1
+my $unpaired_output = File::Temp->new( UNLINK => 1, SUFFIX => '.fastq' ); # temporary file with results pair1
 
 #create log file
 if ( -e $outputdir) {
@@ -108,7 +108,7 @@ print LOG "\n";
 
 #remove ribosomal sequence
 print LOG datetime, " Removing ribosomal sequences using SortMeRNA\n";
-`cp $paired_output t5`;
+#`cp $paired_output t5`;
 ribosome_removal($paired_output, 1);
 print LOG datetime, " File with paired reads, FASTQ reads: ", count_fastq($paired_output), "\n";
 ribosome_removal($unpaired_output, 0);
@@ -141,61 +141,6 @@ sub stats1 {
 	`fastq_quality_boxplot_graph.sh -i $ts -o "$outputdir/$boxfilename" -t $basename`;
 	`fastx_nucleotide_distribution_graph.sh -i $ts -o "$outputdir/$nucfilename" -t $basename`;
 	return ($boxfilename . ", " . $nucfilename);
-}
-
-sub filter_chastity_pair {
-	my ($infile) = @_;
-	open (INPUT, $infile) or die "cannot open file $infile\n";
-        my $chasoutput = File::Temp->new( UNLINK => 1, SUFFIX => '.fastq' );
-	open (OUTPUT, ">$chasoutput") or die;
-	open (OUTPUT2, ">>$unpaired_output") or die;
-
-	while (my $line = <INPUT>) { #not testing the file here, assuming it's fastq
-		my $seq1 = $line. <INPUT> . <INPUT> . <INPUT>; #forward sequence
-		my $seq2 = <INPUT>. <INPUT> . <INPUT> . <INPUT>; #reverse sequence
-		
-		if (($seq1 =~ /^\S+:Y\s/) and ($seq2 =~ /^\S+:N\s/) ) {
-			print OUTPUT2 "$seq1";
-		}
-		elsif (($seq1 =~ /^\S+:N\s/) and ($seq2 =~ /^\S+:Y\s/) ) {
-			print OUTPUT2 "$seq2";
-		}
-		elsif (($seq1 =~ /^\S+:Y\s/) and ($seq2 =~ /^\S+:Y\s/) ) {
-			print OUTPUT "$seq1";
-			print OUTPUT "$seq2";
-		}
-		elsif (($seq1 =~ /^\S+:N\s/) and ($seq2 =~ /^\S+:N\s/) ) {
-		
-		}
-		else {
-			die "error reading files for chastity filter\n$seq1\n\n$seq2";
-		}
-	}
-	close INPUT;
-	close OUTPUT;
-	close OUTPUT2;
-	`mv $chasoutput $paired_output`;
-}
-
-sub filter_chastity {
-	my ($inputfile) = @_;
-	open (INPUT, $inputfile) or die "cannot open file $inputfile\n";
-	my $chasoutput = File::Temp->new( UNLINK => 1, SUFFIX => '.fastq' );
-	open (OUTPUT, ">$chasoutput") or die "cannot open output file $chasoutput\n";
-	while (my $line = <INPUT>) {
-		if ($line =~ /^@/) {
-			my $seq = $line . <INPUT> . <INPUT> . <INPUT>;
-			if ($line =~ /:Y\s$/) {
-				print OUTPUT "$seq";
-			}
-		}
-		else {
-			die "file $inputfile does not match FASTQ at line:\n$line";
-		}
-	}
-	close INPUT;
-	close OUTPUT;
-	`mv $chasoutput $unpaired_output`;
 }
 
 sub count_fastq {
