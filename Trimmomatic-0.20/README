@@ -1,3 +1,0 @@
-# Fri 23 Mar 2012 09:30:49 AM PDT Just discovered this, it's great!  file /home/peter/Desktop/Link to Work/Trimmomatic-0.20/illuminaClipping.fa has the adapters from the Illumina letter from 2011-01-10 that Rob sent me.  Below is a command line example
-
-peter@peter-Inspiron-531s:~/Desktop/Trimmomatic-0.20$ java -classpath trimmomatic-0.20.jar org.usadellab.trimmomatic.TrimmomaticPE -phred33 ../test1.fastq ../test2.fastq lane1_forward_paired.fq lane1_forward_unpaired.fq lane1_reverse_paired.fq lane1_reverse_unpaired.fq ILLUMINACLIP:illuminaClipping.fa:2:40:15 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:36
