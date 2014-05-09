@@ -104,27 +104,7 @@ my $unpairedoutname = $outputdir . "/" . $outputname .  "-unpaired.fq";
 print LOG datetime, " Data file are written in $unpairedoutname\n";
 print LOG "\n";
 
-##print quality results
-##print datetime, " quality statistics not produced, need to install gnuplot\n";
-#print LOG datetime, " Producing quality statistics\n";
-#print LOG datetime, " Paired file quality boxplot and nucleotide distributions are in directory $outputdir in files: ", stats1($pairedoutname), " \n";
-#print LOG datetime, " Unaired file quality boxplot and nucleotide distributions are in directory $outputdir in files: ", stats1($unpairedoutname), " \n";
-
-
 ######## subroutines ###################
-
-sub stats1 {
-	my ($inputfile) = @_;
-	my $basename = basename($inputfile, ".fq");
-	my $ts = File::Temp->new( UNLINK => 1, SUFFIX => '.txt' ); # temporary file
-	my $boxfilename = $basename . "-quality_boxplot.png";
-	my $nucfilename = $basename . "-nuc_dist.png";
-	`fastx_quality_stats -i $inputfile -o $ts -Q33`;
-	`fastq_quality_boxplot_graph.sh -i $ts -o "$outputdir/$boxfilename" -t $basename`;
-	`fastx_nucleotide_distribution_graph.sh -i $ts -o "$outputdir/$nucfilename" -t $basename`;
-	return ($boxfilename . ", " . $nucfilename);
-}
-
 sub count_fastq {
 #	print STDERR "count fastq...\n";
 	my ($title) = @_;
