@@ -1,3 +1,9 @@
+# Oct 2015
+
+File clean_pair2.pl does the same as clean_pair.pl but it does:
+1) try to find overlaps between pairs and turn these into single unpaired reads using FLASH
+2) collapse the unpaired reads into single file using FASTX
+
 # July 2012 scripts for cleanning up RNAseq data prior to assembly
 
 Test data are provided: "t1.fq" and "t2.fq"
