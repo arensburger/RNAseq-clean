@@ -18,7 +18,7 @@ use File::Path;
 # CONSTANTS
 # adapter trimming parameters
 my $TRIMMOMATIC_PATH = "./Trimmomatic-0.32"; # java program location
-my $SORTMELOC = "/home/parensburge/Desktop/RNAseq-clean/sortmerna-1.99-beta-linux-64bit"; # must keep full path name for sortme program
+my $SORTMELOC = "/home/peter/RNAseq-clean/sortmerna"; # must keep full path name for sortme program
 my $MINLEN = 35;
 
 # other parameters
@@ -99,7 +99,7 @@ print LOG datetime, " File with paired reads, FASTQ reads: ", count_fastq($paire
 print LOG datetime, " File with unpaired reads, FASTQ reads: ", count_fastq($unpaired_output), "\n";
 print LOG "\n";
 
-#print LOG "\n";
+print LOG "\n";
 #artifact filter
 print LOG datetime, " Removing artifacts from unpaired file only\n";
 filter_artifact($unpaired_output);
@@ -108,7 +108,7 @@ print LOG "\n";
 
 #remove ribosomal sequence
 print LOG datetime, " Removing ribosomal sequences using SortMeRNA\n";
-#`cp $paired_output t5`;
+`cp $paired_output t5`;
 ribosome_removal($paired_output, 1);
 print LOG datetime, " File with paired reads, FASTQ reads: ", count_fastq($paired_output), "\n";
 ribosome_removal($unpaired_output, 0);
@@ -172,7 +172,8 @@ sub ribosome_removal{
         my $ribooutput = File::Temp->new( UNLINK => 1);
 	my $ribooutput2 = File::Temp->new( UNLINK => 1);
 	if ($paired) {
-		`$SORTMELOC/sortmerna --ref $SORTMELOC/rRNA_databases/silva-bac-16s-database-id85.fasta,$SORTMELOC/index/silva-bac-16s:$SORTMELOC/rRNA_databases/silva-bac-23s-database-id98.fasta,$SORTMELOC/index/silva-bac-23s:$SORTMELOC/rRNA_databases/silva-arc-16s-database-id95.fasta,$SORTMELOC/index/silva-arc-16s:$SORTMELOC/rRNA_databases/silva-arc-23s-database-id98.fasta,$SORTMELOC/index/silva-arc-23s:$SORTMELOC/rRNA_databases/silva-euk-18s-database-id95.fasta,$SORTMELOC/index/silva-euk-18s:$SORTMELOC/rRNA_databases/silva-euk-28s-database-id98.fasta,$SORTMELOC/index/silva-euk-28s:$SORTMELOC/rRNA_databases/rfam-5.8s-database-id98.fasta,$SORTMELOC/index/rfam-5.8s:$SORTMELOC/rRNA_databases/rfam-5s-database-id98.fasta,$SORTMELOC/index/rfam-5s --reads $infile --feeling-lucky --other $ribooutput2 -a $threads --paired_out --fastx --sam --aligned $ribooutput`; 
+#		`$SORTMELOC/sortmerna --ref $SORTMELOC/rRNA_databases/silva-bac-16s-database-id85.fasta,$SORTMELOC/index/silva-bac-16s:$SORTMELOC/rRNA_databases/silva-bac-23s-database-id98.fasta,$SORTMELOC/index/silva-bac-23s:$SORTMELOC/rRNA_databases/silva-arc-16s-database-id95.fasta,$SORTMELOC/index/silva-arc-16s:$SORTMELOC/rRNA_databases/silva-arc-23s-database-id98.fasta,$SORTMELOC/index/silva-arc-23s:$SORTMELOC/rRNA_databases/silva-euk-18s-database-id95.fasta,$SORTMELOC/index/silva-euk-18s:$SORTMELOC/rRNA_databases/silva-euk-28s-database-id98.fasta,$SORTMELOC/index/silva-euk-28s:$SORTMELOC/rRNA_databases/rfam-5.8s-database-id98.fasta,$SORTMELOC/index/rfam-5.8s:$SORTMELOC/rRNA_databases/rfam-5s-database-id98.fasta,$SORTMELOC/index/rfam-5s --reads $infile --feeling-lucky --other $ribooutput2 -a $threads --paired_out --fastx --sam --aligned $ribooutput`; 
+		`$SORTMELOC/sortmerna --ref $SORTMELOC/rRNA_databases/silva-arc-23s-id98.fasta,$SORTMELOC/index/silva-arc-23s-db:$SORTMELOC/rRNA_databases/misc_rRNA.fasta,$SORTMELOC/index/misc_rRNA-db:$SORTMELOC/rRNA_databases/silva-bac-16s-id90.fasta,$SORTMELOC/index/silva-bac-16s-db:$SORTMELOC/rRNA_databases/rfam-5.8s-database-id98.fasta,$SORTMELOC/index/rfam-5.8s-database-db:$SORTMELOC/rRNA_databases/silva-bac-23s-id98.fasta,$SORTMELOC/index/silva-bac-23s-db:$SORTMELOC/rRNA_databases/rfam-5s-database-id98.fasta,$SORTMELOC/index/rfam-5s-db:$SORTMELOC/rRNA_databases/silva-euk-18s-id95.fasta,$SORTMELOC/index/silva-euk-18s-db:$SORTMELOC/rRNA_databases/silva-euk-28s-id98.fasta,$SORTMELOC/index/silva-euk-28s-db:$SORTMELOC/rRNA_databases/silva-arc-16s-id95.fasta,$SORTMELOC/index/silva-arc-16s-db --reads $infile --other $ribooutput2 -a $threads --paired_out --fastx --sam --aligned $ribooutput`; 
 
 		#sortme still leaves unmatched pairs, this tries to remove them and put them into the unpaired file
 		my $tempname = "$ribooutput2" . ".fastq"; #necessary because sortmeRNA adds .fastq to the output file without asking
@@ -205,7 +206,8 @@ sub ribosome_removal{
 		close OUTPUT2;
 	}
 	else {
-		`$SORTMELOC/sortmerna --ref $SORTMELOC/rRNA_databases/silva-bac-16s-database-id85.fasta,$SORTMELOC/index/silva-bac-16s:$SORTMELOC/rRNA_databases/silva-bac-23s-database-id98.fasta,$SORTMELOC/index/silva-bac-23s:$SORTMELOC/rRNA_databases/silva-arc-16s-database-id95.fasta,$SORTMELOC/index/silva-arc-16s:$SORTMELOC/rRNA_databases/silva-arc-23s-database-id98.fasta,$SORTMELOC/index/silva-arc-23s:$SORTMELOC/rRNA_databases/silva-euk-18s-database-id95.fasta,$SORTMELOC/index/silva-euk-18s:$SORTMELOC/rRNA_databases/silva-euk-28s-database-id98.fasta,$SORTMELOC/index/silva-euk-28s:$SORTMELOC/rRNA_databases/rfam-5.8s-database-id98.fasta,$SORTMELOC/index/rfam-5.8s:$SORTMELOC/rRNA_databases/rfam-5s-database-id98.fasta,$SORTMELOC/index/rfam-5s --reads $infile --feeling-lucky --other $ribooutput2 -a $threads --fastx --aligned $ribooutput --sam`; 
+#		`$SORTMELOC/sortmerna --ref $SORTMELOC/rRNA_databases/silva-bac-16s-database-id85.fasta,$SORTMELOC/index/silva-bac-16s:$SORTMELOC/rRNA_databases/silva-bac-23s-database-id98.fasta,$SORTMELOC/index/silva-bac-23s:$SORTMELOC/rRNA_databases/silva-arc-16s-database-id95.fasta,$SORTMELOC/index/silva-arc-16s:$SORTMELOC/rRNA_databases/silva-arc-23s-database-id98.fasta,$SORTMELOC/index/silva-arc-23s:$SORTMELOC/rRNA_databases/silva-euk-18s-database-id95.fasta,$SORTMELOC/index/silva-euk-18s:$SORTMELOC/rRNA_databases/silva-euk-28s-database-id98.fasta,$SORTMELOC/index/silva-euk-28s:$SORTMELOC/rRNA_databases/rfam-5.8s-database-id98.fasta,$SORTMELOC/index/rfam-5.8s:$SORTMELOC/rRNA_databases/rfam-5s-database-id98.fasta,$SORTMELOC/index/rfam-5s --reads $infile --feeling-lucky --other $ribooutput2 -a $threads --fastx --aligned $ribooutput --sam`; 
+		`$SORTMELOC/sortmerna --ref $SORTMELOC/rRNA_databases/silva-arc-23s-id98.fasta,$SORTMELOC/index/silva-arc-23s-db:$SORTMELOC/rRNA_databases/misc_rRNA.fasta,$SORTMELOC/index/misc_rRNA-db:$SORTMELOC/rRNA_databases/silva-bac-16s-id90.fasta,$SORTMELOC/index/silva-bac-16s-db:$SORTMELOC/rRNA_databases/rfam-5.8s-database-id98.fasta,$SORTMELOC/index/rfam-5.8s-database-db:$SORTMELOC/rRNA_databases/silva-bac-23s-id98.fasta,$SORTMELOC/index/silva-bac-23s-db:$SORTMELOC/rRNA_databases/rfam-5s-database-id98.fasta,$SORTMELOC/index/rfam-5s-db:$SORTMELOC/rRNA_databases/silva-euk-18s-id95.fasta,$SORTMELOC/index/silva-euk-18s-db:$SORTMELOC/rRNA_databases/silva-euk-28s-id98.fasta,$SORTMELOC/index/silva-euk-28s-db:$SORTMELOC/rRNA_databases/silva-arc-16s-id95.fasta,$SORTMELOC/index/silva-arc-16s-db --reads $infile --other $ribooutput2 -a $threads --paired_out --fastx --sam --aligned $ribooutput`; 
 		my $tempname = "$ribooutput2" . ".fastq"; #necessary because sortmeRNA adds .fastq to the output file without asking
 		`mv $tempname $unpaired_output`;
 	}
