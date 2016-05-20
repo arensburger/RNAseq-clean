@@ -109,7 +109,7 @@ print LOG "\n";
 # collapse the reads, removing duplicates
 print LOG datetime, " Collapsing reads (removing duplicates) for unpaired file only\n";
 my $colapseoutput = File::Temp->new( UNLINK => 1);
-`fastx_collapser -i $unpaired_output -o $colapseoutput`;
+`fastx_collapser -i $unpaired_output -o $colapseoutput -Q33`;
 `cp $colapseoutput $unpaired_output`;
 print LOG datetime, " Unpaired file with collapsed reads (FASTA): ", count_fastq($unpaired_output, "fa"), "\n";
 print LOG "\n";
