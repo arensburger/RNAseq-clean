@@ -80,6 +80,9 @@ else {
 print LOG datetime, " Initial count\n";
 print LOG datetime, " File $readspair1, total FASTQ reads: ", count_fastq($readspair1), "\n"; # do a basic count
 
+#log the md5sum
+print LOG datetime, " MD5sum: ", md5sum($readpair1);
+
 #clip adapters
 print LOG datetime, " Clipping adapters and quality filter with Trimmomatic\n";
 clipadapters($readspair1);
@@ -168,5 +171,11 @@ sub commify {
     my $text = reverse $_[0];
     $text =~ s/(\d\d\d)(?=\d)(?!\d*\.)/$1,/g;
     return scalar reverse $text
+}
+
+sub md5sum {
+	my ($filename) = @_;
+	my $textout = `md5sum $filename`;
+	return($textout);
 }
 
