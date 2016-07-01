@@ -18,7 +18,7 @@ use File::Path;
 # CONSTANTS
 # adapter trimming parameters
 my $TRIMMOMATIC_PATH = "./Trimmomatic-0.32"; # java program location
-my $SORTMELOC = "/home/peter/RNAseq-clean/sortmerna"; # must keep full path name for sortme program
+my $SORTMELOC = "/home/arensburger/RNAseq-clean/sortmerna"; # must keep full path name for sortme program
 my $MINLEN = 19;
 
 # other parameters
@@ -81,7 +81,7 @@ print LOG datetime, " Initial count\n";
 print LOG datetime, " File $readspair1, total FASTQ reads: ", count_fastq($readspair1), "\n"; # do a basic count
 
 #log the md5sum
-print LOG datetime, " MD5sum: ", md5sum($readpair1);
+print LOG datetime, " MD5sum: ", md5sum($readspair1);
 
 #clip adapters
 print LOG datetime, " Clipping adapters and quality filter with Trimmomatic\n";
