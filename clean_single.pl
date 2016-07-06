@@ -130,6 +130,10 @@ sub clipadapters {
 	my $forward_unpaired = File::Temp->new( UNLINK => 1, SUFFIX => '.fastq' );
 
 	`java -jar $TRIMMOMATIC_PATH/trimmomatic-0.32.jar SE -threads $threads -phred33 $inputfile1 $forward_unpaired ILLUMINACLIP:$TRIMMOMATIC_PATH/illuminaClipping.fa:2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:$MINLEN`;
+	if ($? < 0) {
+                print LOG "Trimmomatic did not run correctly, aborting\n";
+                die "Trimmomatic did not run correctly\n";
+        }
 	
 	#merge the files
 	open (INPUT1, $forward_unpaired) or die;
