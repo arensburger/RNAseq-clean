@@ -6,8 +6,8 @@ clean_single.pl --> clean unpaired libraries
 clean_pair.pl --> clean paired libraries
 clean_pair2.pl --> clean paired libraries and collapse overlaping reads first (probably best)
 
-# July 2016
-SortmeRNA is too big to put into this folder, download it from this link https://www.dropbox.com/s/vrn6z2mp9ea3nq2/sortmerna.tar.gz?dl=0
+#July 2016
+SortmeRNA is too big for github, can be found here: https://www.dropbox.com/s/kccfpr59wogrwv4/sortmerna.tar.gz
 
 # Oct 2015
 
